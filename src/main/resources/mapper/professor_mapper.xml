@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.last.prj.professor.service.ProfessorService">
+
+	<!-- 교수 하나 찾기 -->
+	<select id="professorSelect" resultType = "ProfessorVO">
+		SELECT *
+		FROM PROFESSOR
+		WHERE PID = #{pid}
+	</select>
+
+	<!-- 강의 정보 리스트 -->
+	<select id="lectureList" resultType = "ProfessorLectureVO">
+		SELECT FIND_CODE_NAME(100, V.DCODE) AS DIVISION, V.CREDIT, V.GRADE, V.LNAME,
+				P.PNAME, P.EMAIL, P.PPHONE, P.PSTATUS,
+				L.*,
+				M.DNAME, M.MNAME,
+				R.LRNAME,
+				S.W1, S.W2, S.W3, S.W4, S.W5, S.W6, S.W7, S.W8, S.W9, S.W10, 
+				S.W11, S.W12, S.W13, S.W14, S.W15, S.W16, S.CONTENT
+		FROM LECTURE_INFO V, LECTURE L, PROFESSOR P, MAJOR_VIEW M, LECTURE_ROOM R, STUDY_PLAN S
+		WHERE V.LNUM = L.LNUM
+		AND L.PID = P.PID
+		AND L.OPENNUM = S.OPENNUM
+		AND L.LRCODE = R.LRCODE
+		AND L.LYEAR = TO_CHAR(SYSDATE, 'RRRR')
+		AND L.PID = #{pid}
+		AND P.MCODE = M.MCODE
+		ORDER BY L.LYEAR DESC
+	</select>
+	<!--
+	rr: 1900년대 포함
+	yy: 2000년대를 나타냄
+	-->
+	
+	<!-- 교수 정보 검색 -->
+	<select id="professorInfo" resultType = "ProfessorVO">
+		SELECT FINDE_CODE_NAME(210, P.PSTATUS) AS PSTATUS, 
+				P.EMAIL, P.PPHONE, P.PBIRTH, P.PGENDER, P.PID, P.PNAME, 
+				MV.DNAME, MV.MNAME, FIND_CODE_NAME(220, P.POSITION) AS POSITION
+		FROM PROFESSOR P, MAJOR_VIEW MV
+		WHERE P.MCODE = MV.MCODE
+		AND P.PID = #{pid}
+	</select>
+	
+	<!-- 지도 학생 -->
+	<select id = "guidanceStudent" resultType="StudentsVO">
+		SELECT SID, SNAME, SPHONE, GRADE, SGENDER, DISABLED,
+				FIND_CODE_NAME(300, SSTATUS) AS SSTATUS, SBIRTH, PICTURE
+		FROM STUDENTS
+		WHERE PID = #{pid}
+	</select>
+
+</mapper>

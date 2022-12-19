@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tiles-definitions PUBLIC
+  "-//Apache Software Foundation//DTD Tiles Configuration 2.1//EN"
+  "http://tiles.apache.org/dtds/tiles-config_2_1.dtd">
+
+<tiles-definitions>
+
+	<definition name="home" template="/WEB-INF/views/home.jsp" />
+
+	<!-- tiles 적용 -->
+	<definition name="userTemplate" template="/WEB-INF/views/tiles/layout.jsp">
+		<put-attribute name="header" value="/WEB-INF/views/tiles/header.jsp" />
+		<put-attribute name="nav" value="/WEB-INF/views/tiles/nav.jsp" />
+		<put-attribute name="content" value="/WEB-INF/views/tiles/content.jsp" />
+	</definition>
+	
+	<!-- 
+	시작페이지 로그인 화면에만 tiles 달리 적용하기 위해 name에 tiles라는 문구 넣어 차별화
+	HomeController에 return 부분 끝에 .tiles 넣으면 적용
+	 -->
+	<definition name="*/*.tiles" extends="userTemplate">
+		<!-- <put-attribute name="dynamic_css" value="/resources/css/{2}.css"/> -->
+		<put-attribute name="content" value="/WEB-INF/views/{1}/{2}.jsp" />
+	</definition>
+	
+</tiles-definitions>

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans 
+	xmlns:beans="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:security="http://www.springframework.org/schema/security"
+	xsi:schemaLocation="http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security-5.2.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.3.xsd">
+		
+	<security:http pattern="/resources/**" security="none" />
+	
+	<security:http>
+		<security:intercept-url pattern="/goLogin" access="permitAll()" />
+		<security:intercept-url pattern="/forget*" access="permitAll()" />
+		<security:intercept-url pattern="/studentInfo" access="hasAnyRole('ROLE_STD', 'ROLE_AD')" />
+		<security:intercept-url pattern="/logList" access="hasRole('ROLE_AD')" />
+		<security:intercept-url pattern="/**" access="hasAnyRole('ROLE_PRO', 'ROLE_STD', 'ROLE_AD')" />
+		<security:form-login 
+					login-page="/goLogin"
+					login-processing-url="/logincheck"
+					default-target-url="/home2"
+					username-parameter="id"
+					password-parameter="pwd"
+					authentication-success-handler-ref="customSuccessHandler"
+					authentication-failure-handler-ref="loginFailureHandler"
+					/>
+					
+		<security:logout logout-url="/logout" 
+					 logout-success-url="/goLogin"
+					 invalidate-session="true"
+					 delete-cookies="JSESSIONID"
+					  />
+		<security:csrf disabled="true" />
+	</security:http>
+	<security:authentication-manager>
+		<security:authentication-provider>
+			<security:jdbc-user-service data-source-ref="dataSource"
+				users-by-username-query=
+					"select SID, PWD, 1
+					from role_chk
+					where sid = ?"
+				authorities-by-username-query=	
+					"select sid, ROLE_NAME
+					from role_chk
+					where sid = ?" />
+					<security:password-encoder hash="bcrypt" />
+		</security:authentication-provider>
+	</security:authentication-manager>
+	
+	<beans:bean id="customSuccessHandler" class="com.last.prj.common.CustomSuccessHandler">
+		<beans:property name="defaultTargetUrl" value="/" />
+	</beans:bean>
+	
+	<beans:bean id="loginFailureHandler" class="com.last.prj.common.LoginFailureHandler"></beans:bean>
+</beans:beans>

@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.last.prj.students.service.StudentsService">
+
+<!--
+namespace
+	mapper interface의 이름과 맞춰주면 xml의 설정과 인터페이스에 선언한 설정을 같이 사용 할 수 있게 된다. 제약도 같이 적용이 된다.
+	출처: https://devyongsik.tistory.com/527 [DEV용식]
+	
+	parameterType은 생략 가능
+ -->
+ 
+ 	<!-- 지도 교수 강의 정보 -->
+ 	<select id = "proLectureList" resultType = "StudentsVO">
+ 		SELECT L.*, LI.LNAME, LR.LRNAME
+ 		FROM LECTURE L, LECTURE_INFO LI, LECTURE_ROOM LR
+ 		WHERE L.LNUM = LI.LNUM
+ 		AND L.LRCODE = LR.LRCODE
+ 		AND L.LYEAR = TO_CHAR(SYSDATE, 'RRRR')
+ 		AND L.PID = (
+ 			SELECT PID
+ 			FROM STUDENTS
+ 			WHERE SID = #{sid}
+ 		)
+ 		AND DATESTATUS = '수강중'
+ 	</select>
+ 
+ 	<!-- 학생 사진 업데이트 -->
+ 	<update id="studentPicUpdate" parameterType = "StudentsVO">
+ 		UPDATE STUDENTS
+ 		SET PICTURE = #{picture}
+ 		WHERE SID = #{sid}	
+ 	</update>
+ 	
+ 	<!-- 학생 본인 정보 조회 -->
+ 	<select id="studentInfo" resultType = "StudentsVO">
+ 		SELECT M.MNAME, M.DNAME,
+ 				P.PNAME, S.PICTURE,
+ 				S.SID, P.PID, S.SNAME, S.SADDRESS, S.EMAIL,
+ 				SUBSTR(S.SPHONE, 1, 3) || '-' || SUBSTR(S.SPHONE, 4, 4) || '-' || SUBSTR(S.SPHONE, 7, 4) SPHONE,
+ 				TO_CHAR(S.ENTER_DATE, 'RRRR/MM/DD/') ENTER_DATE,
+ 				S.GRADE, GRADE * 2 - (2-TERM) TERM, S.SGENDER, S.DISABLED,
+ 				SUBSTR(S.SBIRTH, 1, 4) || '/' || SUBSTR(S.SBIRTH, 5, 2) || '/' || SUBSTR(S.SBIRTH,7, 2) SBIRTH,
+ 				FIND_CODE_NAME(300, S.SSTATUS) SSTATUS
+		FROM MAJOR_VIEW M, STUDENTS S, PROFESSOR P
+		WHERE M.MCODE = S.MCODE
+		AND S.MCODE = P.MCODE
+		AND P.PID = S.PID
+		AND S.SID = #{sid} 				
+ 	</select>
+ 	
+ 	<!-- 총점 트리거 -->
+ 	<!-- 학생 본인 성적 조회 -->
+ 	<select id="scoreView" resultType = "StudentsVO">
+ 		SELECT M.*,
+ 				L.LYEAR, L.TERM, I.LNAME,
+ 				I.CREDIT, FIND_CODE_NAME(100, I.DCODE) DIVISION, P.PNAME
+		FROM SCORE_MANA M, STUDENTS S, LECTURE L, LECTURE_INFO I, PROFESSOR P
+		WHERE M.SID = S.SID
+		AND M.OPENNUM = L.OPENNUM
+		AND L.LNUM = I.LNUM
+		AND P.PID = I.PID
+		AND S.SID = #{sid}
+ 	</select>
+ 	
+ 	<!-- 학생 성적 조회(4.5 만점 형식) -->
+ 	<select id="achievementView" resultType="StudentsVO">
+ 		SELECT DISTINCT L.LYEAR, L.TERM,
+ 				ROUND(NVL(SUM(SM.TOTAL)/COUNT(SM.TOTAL) * 0.045, 0), 2) AS TOTALSCORE,
+ 				EVALCHECKFN(#{sid}, #{lyear}, #{term}) EVALCHECK
+ 		FROM SCORE_MANA SM, LECTURE L
+ 		WHERE SM.OPENNUM = L.OPENNUM
+ 		AND SID = #{sid}
+ 		AND L.LYEAR = #{lyear}
+ 		AND L.TERM = #{term}
+ 		GROUP BY L.LYEAR, L.TERM, EVALCHECKFN(#{sid}, #{lyear}, #{term})
+ 	</select>
+ 	
+ 	<select id="divisionList" resultType = "StudentsVO">
+ 		SELECT DISTINCT L.LYEAR, L.TERM,
+ 				NVL(SUM((SELECT SUM(LI.CREDIT) FROM DUAL WHERE LI.DCODE='001')),0) AS JP,
+				NVL(SUM((SELECT SUM(LI.CREDIT) FROM DUAL WHERE LI.DCODE='002')),0) AS JS,
+				NVL(SUM((SELECT SUM(LI.CREDIT) FROM DUAL WHERE LI.DCODE='003')),0) AS NK,
+				NVL(SUM((SELECT SUM(LI.CREDIT) FROM DUAL WHERE LI.DCODE='004')),0) AS PK
+		FROM LECTURE L, LECTURE_INFO LI, SCORE_MANA S
+		WHERE L.LNUM = LI.LNUM
+		AND L.OPENNUM = S.OPENNUM
+		AND S.SID = #{sid}
+		GROUP BY L.LYEAR, L.TERM
+		ORDER BY 1
+ 	</select>
+ 	
+ 	<!-- 학생 본인 수강 신청 과목 조회 -->
+ 	<select id="appliedLecture" resultType = "StudentsVO">
+		SELECT * 
+		FROM (SELECT
+		            I.LNUM, I.LNAME, FIND_CODE_NAME(100, I.DCODE) DIVISION, I.CREDIT, S.SID,
+		            L.TIMETABLE, L.DIVIDENUM, L.OPENNUM,
+		            P.PNAME, P.EMAIL, P.PID,
+		            (SUBSTR(PPHONE, 1, 3) || '-' || SUBSTR(PPHONE, 4, 4) || '-' || SUBSTR(PPHONE, 7, 4)) PPHONE,
+		            R.LRNAME, 
+		            m.finalscore
+		        FROM STUDENTS S, SCORE_MANA M, PROFESSOR P,
+		            LECTURE_INFO I, LECTURE L, LECTURE_ROOM R
+		        WHERE S.SID = M.SID	
+		        AND P.PID = L.PID
+		        AND L.PID = I.PID
+		        AND L.LRCODE = R.LRCODE
+		        AND M.OPENNUM = L.OPENNUM
+		        AND I.LNUM = L.LNUM
+		        AND L.LYEAR = TO_CHAR(SYSDATE,'RRRR')
+		        AND L.TERM = #{term}
+		        AND S.SID = #{sid}
+		        ) LIST1, (
+		            SELECT Q.OPENNUM, ER.EVALCHECK
+		            FROM (SELECT
+		                        I.LNUM, I.LNAME, FIND_CODE_NAME(100, I.DCODE) DIVISION, I.CREDIT, S.SID,
+		                        L.TIMETABLE, L.DIVIDENUM, L.OPENNUM,
+		                        P.PNAME, P.EMAIL, P.PID,
+		                        (SUBSTR(PPHONE, 1, 3) || '-' || SUBSTR(PPHONE, 4, 4) || '-' || SUBSTR(PPHONE, 7, 4)) PPHONE,
+		                        R.LRNAME
+		                    FROM STUDENTS S, SCORE_MANA M, PROFESSOR P,
+		                        LECTURE_INFO I, LECTURE L, LECTURE_ROOM R
+		                    WHERE S.SID = M.SID	
+		                    AND P.PID = L.PID
+		                    AND L.PID = I.PID
+		                    AND L.LRCODE = R.LRCODE
+		                    AND M.OPENNUM = L.OPENNUM
+		                    AND I.LNUM = L.LNUM
+		                    AND L.LYEAR = TO_CHAR(SYSDATE,'RRRR')
+		                    AND L.TERM = #{term}
+		                    AND S.SID = #{sid}
+		        ) Q, EVALUATIONRESULT ER
+		        WHERE Q.OPENNUM = ER.OPENNUM
+		        AND Q.SID = ER.SID) LIST2
+		WHERE LIST1.OPENNUM = LIST2.OPENNUM(+)
+		ORDER BY CREDIT DESC, DIVISION, LNUM
+	</select>
+	
+ 	<!-- 강의 시간표들 조회 -->
+ 	<select id="lectureLookUp" resultType = "StudentsVO">
+		SELECT 
+			(I.LNUM || '-' || L.DIVIDENUM) LNUM, 
+			I.LNAME, FIND_CODE_NAME(100, I.DCODE) DIVISION, I.GRADE TARGET, I.CREDIT, I.LIMITCOUNT, 
+		    P.PNAME, P.EMAIL, P.PID, 
+		    (SUBSTR(PPHONE, 1, 3) || '-' || SUBSTR(PPHONE, 4, 4) || '-' || SUBSTR(PPHONE, 7, 4)) PPHONE, 
+		    L.TIMETABLE, L.OPENNUM,
+		    R.LRNAME, 
+		    MV.MNAME, MV.DNAME
+		FROM LECTURE L, LECTURE_INFO I, LECTURE_ROOM R, PROFESSOR P, MAJOR_VIEW MV
+		WHERE P.PID = L.PID
+		AND L.PID = I.PID
+		AND L.LRCODE = R.LRCODE
+		AND L.LYEAR = TO_CHAR(SYSDATE,'RRRR')
+		AND L.TERM = #{term}
+		AND L.LNUM = I.LNUM
+		AND MV.MCODE = I.MCODE
+		<if test = "mcode != null and mcode != ''">
+			AND I.MCODE = #{mcode}
+		</if>
+		<if test = "dname != null and dname != ''">
+			AND MV.DNAME = #{dname} 
+		</if>
+		<if test = "division != null and division != ''">
+			AND FIND_CODE_NAME(100, I.DCODE) LIKE '%${division}%'
+		</if>
+		<if test = "location != null and location != ''">
+			AND R.LOCATION = #{location}
+		</if>
+		<if test = "grade != null and grade != ''">
+			AND I.GRADE = #{grade}
+		</if>
+		<if test = "timetable != null and timetable != ''">
+			AND L.TIMETABLE LIKE '%${timetable}%'
+		</if>
+		ORDER BY I.CREDIT DESC, I.LNAME
+	</select>
+ 	
+ 	<!-- 교수 정보 보기 -->
+ 	<select id="professorSelect" resultType="ProfessorVO">
+ 		SELECT PNAME, EMAIL,
+ 			SUBSTR(PPHONE, 1, 3) || '-' || SUBSTR(PPHONE, 4, 4) || '-' || SUBSTR(PPHONE, 7, 4) PPHONE
+		 FROM PROFESSOR
+		 WHERE PNAME = #{pname}
+ 	</select>
+ 	
+ 	<!-- 학생 본인 인증 -->
+ 	<select id="selfAuthentication" resultType="StudentsVO">
+ 		SELECT SNAME, PWD
+ 		FROM STUDENTS
+ 		WHERE SID = #{sid}
+ 	</select>
+ 	
+ 	<!-- 학생 정보 수정 -->
+	<update id="studentUpdate">
+		UPDATE STUDENTS
+		SET PWD = #{pwd}
+		WHERE SID = #{sid}
+	</update>
+	
+	<!-- 이메일 학번 체크 -->
+	<select id="chkSidEmail" resultType = "StudentsVO">
+		SELECT *
+		FROM STUDENTS
+		WHERE SID = #{sid}
+		AND EMAIL = #{email}
+	</select>
+	
+	<!-- 강의실 위치 정보 -->
+	<select id="whereRoom" resultType = "StudentsVO">
+		SELECT DISTINCT LOCATION
+		FROM LECTURE_ROOM
+		ORDER BY LOCATION
+	</select>
+	
+	<!-- 학과명으로 전공 조회 -->
+	<select id="customDcode" resultType="StudentsVO">
+		SELECT D.DNAME, M.MCODE, M.MNAME
+		FROM DEPARTMENTS D, MAJOR M
+		WHERE D.DCODE = M.DCODE
+		AND D.DNAME = #{dname}
+		ORDER BY M.MNAME
+	</select>
+</mapper>

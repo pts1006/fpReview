@@ -1,0 +1,62 @@
+.bigDiv {
+  display: flex;
+  width: 85%;
+  height: 170px;
+  flex-wrap: nowrap;
+  margin: 0 auto;
+  margin-top: 50px;
+}
+
+
+.bigDiv2 {
+	width: 85%;
+	margin: 0 auto;
+}
+
+.infoImg {
+	width: 120px;
+	height: 170px; /* 4:3 */
+	border: 1px solid black;
+}
+
+.bigDiv td {
+	text-align: center;
+	width: 150px;
+	padding: 0;
+	vertical-align: middle;
+}
+
+.bigDiv th {
+	text-align: left;
+	width: 120px;
+	height: 56.5px;
+}
+
+.proInfo th{
+	text-align: center;
+	background-color: rgb(214, 216, 219);
+}
+
+.showSchedule, .showSchedule td {
+	text-align: center;
+	vertical-align: middle;
+	height: 110px;
+	margin: 0;
+}
+
+.detailCul {
+	font-family: "돋움";
+	font-size: 15pt;
+	font-weight: bold;
+}
+
+.timeCol {
+	font-size: 17pt;
+	font-family: "Noto Sans CJK KR";
+	font-weight: bold;
+	color: white;
+}
+
+.showSchedule td, .showSchedule th {
+	border: 1px solid #dee2e6;
+}

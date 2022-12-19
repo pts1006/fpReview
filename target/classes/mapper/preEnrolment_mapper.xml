@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.last.prj.preEnrolment.service.preEnrolmentService">
+	
+	<!-- 
+	[MyBatis] CDATA 사용하기(feat.<> 괄호,특수문자 문자열로 인식하기)
+	https://epthffh.tistory.com/entry/Mybatis-%EC%97%90%EC%84%9C-CDATA-%EC%82%AC%EC%9A%A9%ED%95%98%EA%B8%B0
+	https://java119.tistory.com/70
+	 -->
+	
+	<select id = "preStudentSelect" resultType = "StudentsVO">
+		SELECT *
+		FROM STUDENTS
+		WHERE SID = #{sid}
+	</select>
+
+	<select id = "preLectureList" resultType = "PreEnrolmentVO">
+		SELECT L.LNUM || '-' || L.DIVIDENUM AS LNUM, LI.LNAME, LI.CREDIT, 
+			L.TIMETABLE || ' / ' || LR.LRNAME AS TIMETABLE, 
+			L.OPENNUM,
+			FIND_CODE_NAME(100, LI.DCODE) AS DIVISION,
+			CASE WHEN RETAKE_CHECK(#{sid}, L.OPENNUM) = '001' THEN 'Y'
+				 WHEN RETAKE_CHECK(#{sid}, L.OPENNUM) = '002' THEN 'N'
+				 END AS RETAKE
+		 FROM LECTURE_INFO LI, LECTURE L, LECTURE_ROOM LR, MAJOR_VIEW MV
+		 WHERE LI.LNUM = L.LNUM
+		 AND LI.MCODE = MV.MCODE
+		 AND L.LYEAR = TO_CHAR(SYSDATE, 'RRRR')
+		 AND L.DATESTATUS = '수강중'
+		 AND L.TERM = CASE WHEN TO_CHAR(SYSDATE, 'MM') >= 02 AND TO_CHAR(SYSDATE, 'MM') <![CDATA[ <= ]]> 08 THEN 1
+		 				ELSE 2
+		 				END
+		 AND OPENNUM NOT IN (SELECT OPENNUM FROM PREENROLMENT WHERE SID = #{sid})
+		 <if test = "dcode != 'defaultV' and dcode != null">
+		 	<choose>
+		 		<when test="mcode != 'defaultV' and mcode == '307'">
+		 			AND LI.DCODE IN ('003', '004')
+		 		</when>
+		 		<when test="mcode != 'defaultV and mcode != null">
+		 			AND MV.DCODE = #{dcode}
+		 			AND MV.MCODE = #{mcode}
+		 			AND LI.DCODE NOT IN ('003', '004')
+		 		</when>
+		 		<otherwise>
+		 			AND MV.DCODE = #{dcode}
+		 			AND LI.DCODE NOT IN ('003', '004')
+		 		</otherwise>
+		 	</choose>
+		 </if>
+		 ORDER BY OPENNUM
+	</select>
+	
+	
+	<select id = "preDepartments" resultType = "PreEnrolmentVO">
+		SELECT *
+		FROM DEPARTMENTS
+		ORDER BY DNAME
+	</select>
+	
+	<select id = "getMajorList" resultType = "PreEnrolmentVO">
+		SELECT *
+		FROM MAJOR
+		WEHRE DCODE = #{dcode}
+	</select>
+	
+	<select id = "enrolmentPackage" resultType = "PreEnrolmentVO">
+		SELECT L.LNUM || '-' || L.DIVIDENUM AS LNUM,  
+				LI.LNAME, LI.CREDIT, FIND_CODE_NAME(100, LI.DCODE) AS DIVISION,
+				L.TIMETABLE || ' / ' || LR.LRNAME AS TIMETABLE,
+				CASE WHEN RETAKE_CHECK(#{sid}, L.OPENNUM) = '001' THEN 'Y'
+					 WHEN RETAKE_CHECK(#{sid}, L.OPENNUM) = '002' THEN 'N' 
+				END AS RETAKE, 
+				L.OPENNUM
+		 FROM PREENROLMENT P, LECTURE L, LECTURE_INFO LI, LECTURE_ROOM LR
+		 WHERE P.OPENNUM = L.OPENNUM
+		 AND L.LNUM = LI.LNUM
+		 AND L.LRCODE = LR.LRCODE
+		 AND P.SID = #{sid}
+	</select>
+	
+	<select id = "preEnrolmentLimitCheck" resultType = "int">
+		SELECT COUNT(*)
+		FROM PREENROLMENT
+		WEHRE SID = #{sid}
+	</select>
+	
+	<insert id = "preEnrolmentInsert">
+		INSERT INTO PREENROLMENT(SID, OPENNUM, RETAKE)
+		VALUES(#{sid}, #{opennum},
+				 CASE WHEN #{retake} = 'N' THEN '002'
+					  WHEN #{retake} = 'Y' THEN '001' 
+				 END)
+	</insert>
+	
+	<insert id = "preEnrolmentDelete">
+		DELETE FROM PREENROLMENT
+		WEHRE SID = #{sid}
+		AND OPENNUM = #{opennum}
+	</insert>
+</mapper>

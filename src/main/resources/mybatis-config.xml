@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration
+  PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+	<settings>
+		<!-- 오라클 컬럼이 "first_name"를 VO "firstName"처럼 카멜케이스로 변환 -->
+		<setting name="mapUnderscoreToCamelCase" value="true" />
+		<setting value="VARCHAR" name="jdbcTypeForNull" />
+	</settings>
+	<typeAliases>
+		<!-- <typeAlias type="com.last.prj.professor.service.ProfessorVO" alias="professorVO" /> -->
+		
+		<!-- 패키지 단위 설정 -->
+		<package name="com.last.prj" />
+	</typeAliases>
+</configuration>
+
+<!-- 
+https://spring.tistory.com/3
+https://tlatmsrud.tistory.com/50
+https://dothewillof.tistory.com/19
+
+myBatis typeAliases 사용 이유
+:Mapper.xml 파일에 parameterType이나 resultType을 입력할 때
+패키지 명 까지 입력해야하는 번거로움이 있다
+근데 myBatis 설정파일에서 typeAliases으로 패키지 이름을 지정해주게 되면
+parameterType이나 resultType에 패키지명을 생략해도된다.
+-->
